@@ -3,71 +3,33 @@ import tensorflow as tf
 from PIL import Image
 import numpy as np
 from tensorflow.keras.applications import EfficientNetV2B2
+from tensorflow.keras.applications.efficientnet import preprocess_input
 
-# Page setup
-st.set_page_config(page_title="♻️ Garbage Classifier", layout="centered")
+# Load the saved Keras model
+model = tf.keras.models.load_model("garbage_classifier_efficientnetv2b2.keras")
 
-# Load the trained EfficientNetV2B2 model
-model = tf.keras.models.load_model(
-    "garbage_classifier_efficientnetv2b2.keras",
-    custom_objects={'EfficientNetV2B2': EfficientNetV2B2}
-)
+# Class labels
+class_names = ['cardboard', 'glass', 'metal', 'paper', 'plastic', 'trash']
 
-# Class labels and icons
-labels = ['cardboard', 'glass', 'metal', 'paper', 'plastic', 'trash']
-icons = {
-    'cardboard': '📦',
-    'glass': '🥛',
-    'metal': '🛢️',
-    'paper': '📄',
-    'plastic': '🧴',
-    'trash': '🗑️'
-}
+st.set_page_config(page_title="Garbage Classifier", layout="centered")
 
-# Title
-st.markdown("""
-    <div style="text-align: center;">
-        <h1>♻️ Garbage Classifier</h1>
-        <p style="font-size:18px;">Upload a waste image or use your webcam to classify trash types!</p>
-    </div>
-""", unsafe_allow_html=True)
+st.title("♻️ AI Garbage Classification System")
+st.markdown("Upload a garbage image and I’ll tell you what type it is!")
 
-# Upload or capture section
-st.markdown("### 📤 Upload an image or take a photo")
+uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "png", "jpeg"])
 
-uploaded_file = st.file_uploader("🖼️ Choose an image", type=["jpg", "jpeg", "png"])
-camera_image = st.camera_input("📷 Or take a live photo")
-
-# Prefer camera if both are used
-if camera_image:
-    uploaded_file = camera_image
-
-# If an image is available
-if uploaded_file:
+if uploaded_file is not None:
     image = Image.open(uploaded_file).convert("RGB")
+    st.image(image, caption="Uploaded Image", use_column_width=True)
 
-    # Clearer and larger display
-    st.markdown("### 🔍 Preview of Uploaded Image")
-    st.image(image, caption="✅ Clear View", width=450)
-
-    # Preprocess for EfficientNetV2B2
-    image = image.resize((224, 224))
-    img_array = np.array(image)  # ✅ Do NOT normalize again
+    img = image.resize((224, 224))
+    img_array = np.array(img)
+    img_array = preprocess_input(img_array)
     img_array = np.expand_dims(img_array, axis=0)
 
-    # Prediction
-    preds = model.predict(img_array)
-    pred_idx = np.argmax(preds)
-    pred_label = labels[pred_idx]
-    confidence = np.max(preds) * 100
+    prediction = model.predict(img_array)
+    class_index = np.argmax(prediction)
+    confidence = np.max(prediction)
 
-    # Result
-    st.markdown(f"""
-        <div style="text-align: center; padding: 20px; border-radius: 10px;
-                    background-color: #f1f3f6; margin-top: 20px;">
-            <h2 style="font-size: 28px;">{icons[pred_label]} Predicted: <span style="color: #4CAF50;">{pred_label.capitalize()}</span></h2>
-            <p style="font-size: 18px;">Confidence: <strong>{confidence:.2f}%</strong></p>
-        </div>
-    """, unsafe_allow_html=True)
-else:
-    st.info("⬆️ Please upload an image or take a photo to classify")
+    st.markdown(f"### 🧠 Predicted: **{class_names[class_index].capitalize()}**")
+    st.markdown(f"**Confidence:** {confidence * 100:.2f}%")
