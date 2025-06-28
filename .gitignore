@@ -1,0 +1,7 @@
+garbage-env/
+__pycache__/
+*.pyc
+*.DS_Store
+*.keras
+*.h5
+*.zip
